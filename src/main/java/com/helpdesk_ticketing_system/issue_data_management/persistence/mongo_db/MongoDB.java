@@ -14,6 +14,8 @@ import com.mongodb.client.result.InsertOneResult;
 import org.bson.BsonString;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -26,9 +28,15 @@ public class MongoDB<T> implements Database<T> {
 
     private final MongoCollection<Document> collection;
     
-    public MongoDB(String databaseName, String collectionName) {
+    @Autowired
+    public MongoDB(
+            @Qualifier("mongo-username") String username,
+            @Qualifier("mongo-password") String password,
+            @Qualifier("mongo-conn-uri") String connectionURI,
+            String databaseName,
+            String collectionName) {
         objectMapper = new ObjectMapper();
-        MongoClient mongoClient = MongoDBClient.initializeClient().getMongoClient();
+        MongoClient mongoClient = new MongoDBClient(username,password,connectionURI).getMongoClient();
         collection = mongoClient.getDatabase(databaseName).getCollection(collectionName);
     }
 
