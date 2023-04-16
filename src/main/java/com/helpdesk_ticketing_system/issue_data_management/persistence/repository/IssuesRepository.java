@@ -1,6 +1,7 @@
 package com.helpdesk_ticketing_system.issue_data_management.persistence.repository;
 
 import com.helpdesk_ticketing_system.issue_data_management.entities.Issue;
+import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Status;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.Database;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Random;
 
 @Repository
@@ -46,6 +48,17 @@ class IssuesRepository implements IssuesDao{
 
 
         return db.saveToDb(newIssue);
+    }
+
+    @Override
+    public Issue getIssueById(String issueId) throws Exception {
+        return db.getIssueById(issueId,Issue.class);
+    }
+
+    @Override
+    public List<Issue> getIssues(
+            String username, Integer limit, Long postedOn, Page pageDirection) throws Exception {
+        return db.getIssues(username,postedOn,limit,pageDirection, Issue.class);
     }
 
     private String generateIssueId(Long postedOn) {
