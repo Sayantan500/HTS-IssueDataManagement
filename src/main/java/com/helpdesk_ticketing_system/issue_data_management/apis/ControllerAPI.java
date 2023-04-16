@@ -1,27 +1,33 @@
 package com.helpdesk_ticketing_system.issue_data_management.apis;
 
+import com.helpdesk_ticketing_system.issue_data_management.entities.GetIssuesResponse;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Issue;
+import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Response;
 import com.helpdesk_ticketing_system.issue_data_management.exceptions.PostRequestBodyInvalid;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.repository.IssuesDao;
 import io.micrometer.common.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/issues")
 public class ControllerAPI {
 
     private final IssuesDao issueRepository;
+    private final Integer PAGINATION_LIMIT;
 
     @Autowired
-    public ControllerAPI(IssuesDao issueRepository) {
+    public ControllerAPI(
+            IssuesDao issueRepository,
+            @Qualifier("pagination-limit") Integer PAGINATION_LIMIT) {
         this.issueRepository = issueRepository;
+        this.PAGINATION_LIMIT = PAGINATION_LIMIT;
     }
 
     @PostMapping
@@ -43,6 +49,85 @@ public class ControllerAPI {
                     new Response(e.getStatus(),e.getMessage()),
                     HttpStatus.valueOf(e.getStatus())
             );
+        }
+        catch (Exception e){
+            return new ResponseEntity<>(
+                    new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Object> getIssueByIdIssueIdPathParam(@PathVariable(name = "id") String issueId){
+        try{
+            Issue issue = issueRepository.getIssueById(issueId);
+            if(issue!=null)
+                return new ResponseEntity<>(issue, HttpStatus.OK);
+            else
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        catch (Exception e){
+            return new ResponseEntity<>(
+                    new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<Object> getIssues(
+            @RequestParam(name = "u") String submittedBy,
+            @RequestParam(name = "l") Integer limit,
+            @RequestParam(name = "v",required = false) Long postedOn,
+            @RequestParam(name = "d",required = false,defaultValue = "1") int pageMovementDirection
+    ){
+        try{
+            // checking if the username is present and has valid value
+            if(StringUtils.isEmpty(submittedBy) || StringUtils.isBlank(submittedBy))
+                return new ResponseEntity<>(
+                        new Response(HttpStatus.BAD_REQUEST.value(),"username not found in query params"),
+                        HttpStatus.BAD_REQUEST
+                );
+
+            // cap the pagination limit to 50 number of records only.
+            limit = Math.min(limit, PAGINATION_LIMIT);
+
+            // setting default value of postedOn if contains null
+            if(postedOn==null)
+                postedOn = System.currentTimeMillis();
+
+            // setting the page that needs to fetched
+            Page goToPage;
+            switch (pageMovementDirection){
+                case 1 -> goToPage = Page.NEXT;
+                case -1 -> goToPage = Page.PREV;
+                default -> {
+                    return new ResponseEntity<>(
+                            new Response(
+                                    HttpStatus.BAD_REQUEST.value(),
+                                    "Wrong value provided for page direction, must be 1 or -1"
+                            ),
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+            }
+            List<Issue> issues = issueRepository.getIssues(submittedBy,limit,postedOn,goToPage);
+            GetIssuesResponse getIssuesResponse;
+            if(issues.size()>0) {
+                getIssuesResponse = new GetIssuesResponse(
+                        issues.size(),
+                        issues,
+                        issues.get(0).getPostedOn(),
+                        issues.get(issues.size() - 1).getPostedOn()
+                );
+            }
+            else {
+                getIssuesResponse = new GetIssuesResponse(
+                        0, issues, null, null
+                );
+            }
+            return new ResponseEntity<>(getIssuesResponse, HttpStatus.OK);
         }
         catch (Exception e){
             return new ResponseEntity<>(
