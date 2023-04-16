@@ -5,7 +5,7 @@ import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Status;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.Database;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.util.Calendar;
@@ -15,15 +15,9 @@ import java.util.Random;
 @Repository
 class IssuesRepository implements IssuesDao{
     private final Database<Issue> db;
-
-    @Value("${issue.id.num_of_digits_to_extract.from.posted_on}")
-    private String num_of_digits_to_extract_from_postedOn;
-
-    @Value("${issue.id.random_number_range}")
-    private String randomNumberRangeStr;
-
-    @Value("${issue.id.prefix}")
-    private String ISSUE_ID_PREFIX;
+    private final Integer num_of_digits_to_extract_from_postedOn;
+    private final Integer randomNumberRange;
+    private final String ISSUE_ID_PREFIX;
 
     @Autowired
     private Random random;
@@ -31,8 +25,15 @@ class IssuesRepository implements IssuesDao{
     @Autowired
     private Calendar calendar;
     @Autowired
-    public IssuesRepository(Database<Issue> db) {
+    public IssuesRepository(
+            @Qualifier("issueId.random_number_range") Integer randomNumberRange,
+            @Qualifier("issueId.num_of_digits_to_extract.from.posted_on") Integer num_of_digits_to_extract_from_postedOn,
+            @Qualifier("issueId.prefix") String ISSUE_ID_PREFIX,
+            Database<Issue> db) {
         this.db = db;
+        this.randomNumberRange = randomNumberRange;
+        this.num_of_digits_to_extract_from_postedOn = num_of_digits_to_extract_from_postedOn;
+        this.ISSUE_ID_PREFIX = ISSUE_ID_PREFIX;
     }
 
     @Override
@@ -68,10 +69,7 @@ class IssuesRepository implements IssuesDao{
         int month = calendar.get(Calendar.MONTH)+1;
         int year = calendar.get(Calendar.YEAR);
 
-        int numOfDigitsToExtractFromBack = Integer.parseInt(num_of_digits_to_extract_from_postedOn);
-        int randomNumberRange = Integer.parseInt(randomNumberRangeStr);
-
-        int extractedDigitsOfPostedOn = (int) (postedOn%Math.pow(10,numOfDigitsToExtractFromBack));
+        int extractedDigitsOfPostedOn = (int) (postedOn%Math.pow(10,num_of_digits_to_extract_from_postedOn));
         int randomNumberSuffix = random.nextInt(randomNumberRange);
 
         // pattern : ISS <yyyy> <mm> <dd> <last few digits of postedOn> <random integer>

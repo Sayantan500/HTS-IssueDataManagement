@@ -6,6 +6,7 @@ import com.mongodb.ServerApi;
 import com.mongodb.ServerApiVersion;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.logging.Logger;
 
@@ -13,16 +14,10 @@ class MongoDBClient
 {
     private MongoClient mongoClient;
 
-    private static volatile MongoDBClient mongoDbClient;
-
-    private MongoDBClient() {
-        //Todo : get from system env
-        String USERNAME = "admin";
-        String PASSWORD = "Password";
-        String BASE_URI = "mongodb+srv://%s:%s@cluster0.lcgntfe.mongodb.net/?retryWrites=true&w=majority";
-
-        String counnectionString = String.format(BASE_URI, USERNAME, PASSWORD);
-        ConnectionString connectionString = new ConnectionString(counnectionString);
+    @Autowired
+    MongoDBClient(String USERNAME, String PASSWORD, String BASE_URI) {
+        String connectionURI = String.format(BASE_URI, USERNAME, PASSWORD);
+        ConnectionString connectionString = new ConnectionString(connectionURI);
 
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(connectionString)
@@ -35,16 +30,6 @@ class MongoDBClient
         } catch (Exception e) {
             Logger.getLogger("MongoDBClient").severe(e.getMessage());
         }
-    }
-
-    public static MongoDBClient initializeClient(){
-        if(mongoDbClient==null){
-            synchronized (MongoDBClient.class){
-                if(mongoDbClient==null)
-                    mongoDbClient = new MongoDBClient();
-            }
-        }
-        return mongoDbClient;
     }
 
     public MongoClient getMongoClient(){
