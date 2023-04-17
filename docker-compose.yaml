@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  hts-issues-management-svc:
+    image: my_app:test
+    container_name: hts-issues-management-svc
+    ports:
+      - '8080:8080'
+    env_file:
+      - 'D:\\8th_Sem_Project_development\\Issues_Management_System_ENV.env'
