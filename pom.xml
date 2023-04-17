@@ -11,7 +11,7 @@
 	<groupId>com.helpdesk_ticketing_system</groupId>
 	<artifactId>issue_data_management</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>issue_data_management</name>
+	<name>helpdesk ticketing system - issue_data_management</name>
 	<description>A Spring Boot Application to manage to CRUD operations on Issues Resources</description>
 
 	<properties>
@@ -37,6 +37,18 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<finalName>HTS_Issues_management_System</finalName>
+				</configuration>
+				<executions>
+					<execution>
+						<configuration>
+							<mainClass>
+								com.helpdesk_ticketing_system.issue_data_management.IssueDataManagementApplication
+							</mainClass>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
