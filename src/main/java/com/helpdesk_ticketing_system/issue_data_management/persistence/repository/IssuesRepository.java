@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Repository
@@ -60,6 +61,11 @@ class IssuesRepository implements IssuesDao{
     public List<Issue> getIssues(
             String username, Integer limit, Long postedOn, Page pageDirection) throws Exception {
         return db.getIssues(username,postedOn,limit,pageDirection, Issue.class);
+    }
+
+    @Override
+    public Issue updateIssue(String issueId, Map<String, Object> updatedFieldValuePairs) throws Exception {
+        return db.update(issueId,updatedFieldValuePairs, Issue.class);
     }
 
     private String generateIssueId(Long postedOn) {
