@@ -1,10 +1,12 @@
 package com.helpdesk_ticketing_system.issue_data_management.apis;
 
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.helpdesk_ticketing_system.issue_data_management.entities.GetIssuesResponse;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Issue;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Response;
 import com.helpdesk_ticketing_system.issue_data_management.exceptions.PostRequestBodyInvalid;
+import com.helpdesk_ticketing_system.issue_data_management.exceptions.ResourceNotFoundException;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.repository.IssuesDao;
 import io.micrometer.common.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +15,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/issues")
@@ -21,13 +26,19 @@ public class ControllerAPI {
 
     private final IssuesDao issueRepository;
     private final Integer PAGINATION_LIMIT;
+    private final String TICKET_ID_FIELD;
+    private final String STATUS_FIELD;
 
     @Autowired
     public ControllerAPI(
             IssuesDao issueRepository,
-            @Qualifier("pagination-limit") Integer PAGINATION_LIMIT) {
+            @Qualifier("pagination-limit") Integer PAGINATION_LIMIT,
+            @Qualifier("issues.fieldname.ticketId") String TICKET_ID_FIELD,
+            @Qualifier("issues.fieldname.status") String STATUS_FIELD) {
         this.issueRepository = issueRepository;
         this.PAGINATION_LIMIT = PAGINATION_LIMIT;
+        this.TICKET_ID_FIELD = TICKET_ID_FIELD;
+        this.STATUS_FIELD = STATUS_FIELD;
     }
 
     @PostMapping
@@ -132,6 +143,50 @@ public class ControllerAPI {
         catch (Exception e){
             return new ResponseEntity<>(
                     new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @PutMapping("/{id}/ticket-id")
+    public ResponseEntity<Object> updateTicketIdOfIssue(
+            @PathVariable(name = "id") String issueId,
+            @RequestBody Map<String,String> requestBody
+    ){
+        if(requestBody.isEmpty())
+            return new ResponseEntity<>(
+                    new Response(HttpStatus.BAD_REQUEST.value(), "No request body found."),
+                    HttpStatus.BAD_REQUEST
+            );
+
+        //no fields other than ticket_id and status are allowed to be modified by anyone.
+        if(!requestBody.containsKey(TICKET_ID_FIELD) && !requestBody.containsKey(STATUS_FIELD))
+        {
+            return new ResponseEntity<>(
+                    new Response(
+                            HttpStatus.BAD_REQUEST.value(),
+                            "Field names in request body are either incorrect or not allowed to modify."
+                    ),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        try
+        {
+            Map<String, Object> fieldValuePairs = new LinkedHashMap<>(requestBody);
+            Issue oldIssueDocImage = issueRepository.updateIssue(issueId,fieldValuePairs);
+            return new ResponseEntity<>(oldIssueDocImage,HttpStatus.OK);
+        }catch (ResourceNotFoundException e){
+            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
+            return new ResponseEntity<>(
+                    new Response(HttpStatus.NOT_FOUND.value(), e.getMessage()),
+                    HttpStatus.NOT_FOUND
+            );
+        }
+        catch (Exception e) {
+            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
+            return new ResponseEntity<>(
+                    new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Some error occurred."),
                     HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

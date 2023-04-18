@@ -24,4 +24,14 @@ public class VariablesBeans {
     public String issueIdPrefix(){
         return System.getenv("issueId_prefix");
     }
+
+    @Bean(name = "issues.fieldname.ticketId")
+    public String getTicketIdFieldName(){
+        return System.getenv("issues_fieldname_ticketId");
+    }
+
+    @Bean(name = "issues.fieldname.status")
+    public String getStatusFieldName(){
+        return System.getenv("issues_fieldname_status");
+    }
 }
