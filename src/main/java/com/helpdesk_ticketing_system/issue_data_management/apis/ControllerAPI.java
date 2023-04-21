@@ -195,7 +195,6 @@ public class ControllerAPI {
             );
         }
 
-        //Todo: change max pagination limit to 50
         if(limit>PAGINATION_LIMIT)
             limit = PAGINATION_LIMIT;
 
