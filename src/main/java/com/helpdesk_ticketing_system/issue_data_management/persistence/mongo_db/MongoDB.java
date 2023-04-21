@@ -2,14 +2,16 @@ package com.helpdesk_ticketing_system.issue_data_management.persistence.mongo_db
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
 import com.helpdesk_ticketing_system.issue_data_management.exceptions.ResourceNotFoundException;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.Database;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
-import com.mongodb.client.model.*;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.FindOneAndUpdateOptions;
+import com.mongodb.client.model.ReturnDocument;
+import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.BsonString;
 import org.bson.Document;
@@ -17,7 +19,10 @@ import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class MongoDB<T> implements Database<T> {
@@ -80,9 +85,9 @@ public class MongoDB<T> implements Database<T> {
     @Override
     public List<T> getIssues(
             Object submitted_by,
-            Long postedOn,
+            Long startRange,
+            Long endRange,
             Integer limit,
-            Page pageDirectionToGo,
             Class<T> targetType
     ) throws Exception {
         List<T> resultSet = new ArrayList<>(limit);
@@ -91,49 +96,29 @@ public class MongoDB<T> implements Database<T> {
         List<Bson> queryFiltersList = new LinkedList<>();
         queryFiltersList.add(Filters.eq("submitted_by",submitted_by));
         Bson queryFilters;
-        if(pageDirectionToGo.equals(Page.NEXT))
-            queryFiltersList.add(Filters.lt("posted_on",postedOn));
+
+        if(endRange!=null) {
+            queryFiltersList.add(Filters.lte("posted_on",startRange));
+            queryFiltersList.add(Filters.gte("posted_on", endRange));
+        }
         else
-            queryFiltersList.add(Filters.gt("posted_on",postedOn));
+            queryFiltersList.add(Filters.lt("posted_on",startRange));
+
         queryFilters = Filters.and(queryFiltersList);
 
-        MongoCursor<Document> cursor = null;
         FindIterable<Document> findIterable = collection.find(queryFilters).limit(limit);
-        try {
-            if (pageDirectionToGo.equals(Page.NEXT)) { // going to next page
-                cursor = findIterable.cursor();
-                cursor.forEachRemaining(document -> {
-                    try {
-                        resultSet.add(objectMapper.readValue(document.toJson(), targetType));
-                    } catch (JsonProcessingException e) {
-                        Logger.getLogger("MongoDB").severe(e.getMessage());
-                        throw new RuntimeException(e.getMessage());
-                    }
-                });
-            }
-            else if (pageDirectionToGo.equals(Page.PREV)) { // going to previous page, then sorting in asc and storing in stack to form desc
-                cursor = findIterable.sort(Sorts.ascending("posted_on")).cursor();
-                Stack<Document> stack = new Stack<>();
-                while (cursor.hasNext()) {
-                    stack.push(cursor.next());
+        try (MongoCursor<Document> cursor = findIterable.cursor()) {
+            cursor.forEachRemaining(document -> {
+                try {
+                    resultSet.add(objectMapper.readValue(document.toJson(), targetType));
+                } catch (JsonProcessingException e) {
+                    Logger.getLogger("MongoDB").severe(e.getMessage());
+                    throw new RuntimeException(e.getMessage());
                 }
-
-                while(!stack.isEmpty())
-                {
-                    resultSet.add(
-                            objectMapper.readValue(
-                                    stack.pop().toJson(),targetType
-                            )
-                    );
-                }
-            }
-        }catch (Exception e){
-                Logger.getLogger("MongoDB").severe(e.getMessage());
-                throw new Exception(e.getMessage());
-        }
-        finally {
-            if(cursor!=null)
-                cursor.close();
+            });
+        } catch (Exception e) {
+            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
+            throw new Exception(e.getMessage());
         }
 
         return resultSet;

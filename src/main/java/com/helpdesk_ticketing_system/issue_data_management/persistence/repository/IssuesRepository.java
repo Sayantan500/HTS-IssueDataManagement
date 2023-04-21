@@ -1,7 +1,6 @@
 package com.helpdesk_ticketing_system.issue_data_management.persistence.repository;
 
 import com.helpdesk_ticketing_system.issue_data_management.entities.Issue;
-import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
 import com.helpdesk_ticketing_system.issue_data_management.entities.Status;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.Database;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,8 +58,8 @@ class IssuesRepository implements IssuesDao{
 
     @Override
     public List<Issue> getIssues(
-            String username, Integer limit, Long postedOn, Page pageDirection) throws Exception {
-        return db.getIssues(username,postedOn,limit,pageDirection, Issue.class);
+            String username, Integer limit, Long startRange, Long endRange) throws Exception {
+        return db.getIssues(username,startRange,endRange,limit, Issue.class);
     }
 
     @Override
