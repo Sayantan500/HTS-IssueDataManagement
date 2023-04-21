@@ -82,12 +82,12 @@ public class ControllerAPI {
         }
     }
 
-    @GetMapping
+    @GetMapping(params = {"submitted_by","limit"})
     public ResponseEntity<Object> getIssues(
-            @RequestParam(name = "u") String submittedBy,
-            @RequestParam(name = "l") Integer limit,
-            @RequestParam(name = "v",required = false) Long postedOn,
-            @RequestParam(name = "d",required = false,defaultValue = "1") int pageMovementDirection
+            @RequestParam(name = "submitted_by") String submittedBy,
+            @RequestParam(name = "limit") Integer limit,
+            @RequestParam(name = "r_s",required = false) Long postedOnStartOfRange,
+            @RequestParam(name = "r_e",required = false) Long postedOnEndOfRange
     ){
         try{
             // checking if the username is present and has valid value
@@ -101,25 +101,10 @@ public class ControllerAPI {
             limit = Math.min(limit, PAGINATION_LIMIT);
 
             // setting default value of postedOn if contains null
-            if(postedOn==null)
-                postedOn = System.currentTimeMillis();
+            if(postedOnStartOfRange ==null)
+                postedOnStartOfRange = System.currentTimeMillis();
 
-            // setting the page that needs to fetched
-            Page goToPage;
-            switch (pageMovementDirection){
-                case 1 -> goToPage = Page.NEXT;
-                case -1 -> goToPage = Page.PREV;
-                default -> {
-                    return new ResponseEntity<>(
-                            new Response(
-                                    HttpStatus.BAD_REQUEST.value(),
-                                    "Wrong value provided for page direction, must be 1 or -1"
-                            ),
-                            HttpStatus.BAD_REQUEST
-                    );
-                }
-            }
-            List<Issue> issues = issueRepository.getIssues(submittedBy,limit,postedOn,goToPage);
+            List<Issue> issues = issueRepository.getIssues(submittedBy,limit, postedOnStartOfRange,postedOnEndOfRange);
             GetIssuesResponse getIssuesResponse;
             if(issues.size()>0) {
                 getIssuesResponse = new GetIssuesResponse(
