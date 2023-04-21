@@ -1,10 +1,6 @@
 package com.helpdesk_ticketing_system.issue_data_management.apis;
 
-import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
-import com.helpdesk_ticketing_system.issue_data_management.entities.GetIssuesResponse;
-import com.helpdesk_ticketing_system.issue_data_management.entities.Issue;
-import com.helpdesk_ticketing_system.issue_data_management.entities.Page;
-import com.helpdesk_ticketing_system.issue_data_management.entities.Response;
+import com.helpdesk_ticketing_system.issue_data_management.entities.*;
 import com.helpdesk_ticketing_system.issue_data_management.exceptions.PostRequestBodyInvalid;
 import com.helpdesk_ticketing_system.issue_data_management.exceptions.ResourceNotFoundException;
 import com.helpdesk_ticketing_system.issue_data_management.persistence.repository.IssuesDao;
@@ -190,6 +186,57 @@ public class ControllerAPI {
                     HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    @GetMapping(params = {"status","limit"})
+    public ResponseEntity<Object> getNewIssues(
+            @RequestParam(name = "status") String status,
+            @RequestParam(name = "limit") Integer limit,
+            @RequestParam(name = "r_s",required = false) Long postedOnStartOfRange,
+            @RequestParam(name = "r_e",required = false) Long postedOnEndOfRange
+    ){
+        if(postedOnStartOfRange==null) {
+            postedOnStartOfRange = 0L;
+        }
+
+        // if query param contains value other than 'DELIVERED' (NOT case-sensitive)
+        if(!Status.DELIVERED.name().equalsIgnoreCase(status) || limit<=0 || postedOnStartOfRange<0) {
+            return new ResponseEntity<>(
+                    new Response(
+                            HttpStatus.BAD_REQUEST.value(),
+                            "Invalid Query values."
+                    ),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        //Todo: change max pagination limit to 50
+        if(limit>PAGINATION_LIMIT)
+            limit = PAGINATION_LIMIT;
+
+        // if query param contains expected value
+        List<Issue> newIssuesList;
+        try {
+            newIssuesList =
+                    issueRepository.getNewIssues(Status.DELIVERED,limit,postedOnStartOfRange,postedOnEndOfRange);
+        } catch (Exception e) {
+            Logger.getLogger(this.getClass().getName()).severe(e.getClass().getName());
+            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        int count = newIssuesList.size();
+        if(count>0)
+            return new ResponseEntity<>(
+                    new GetIssuesResponse(
+                            count,
+                            newIssuesList,
+                            newIssuesList.get(0).getPostedOn(),
+                            newIssuesList.get(count-1).getPostedOn()
+                    ),
+                    HttpStatus.OK
+            );
+        return new ResponseEntity<>(newIssuesList,HttpStatus.OK);
     }
 
     private void ValidateRequestBody(Issue issue) throws PostRequestBodyInvalid {

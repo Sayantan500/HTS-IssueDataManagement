@@ -13,4 +13,8 @@ public interface Database<T> {
     ) throws Exception;
 
     T update(Object id, Map<String,Object> updatedFieldValuePairs, Class<T> targetType) throws Exception;
+
+    List<T> getIssuesByStatus(
+            Object status, Long startRange, Long endRange, Integer limit, Class<T> targetType
+    ) throws Exception;
 }

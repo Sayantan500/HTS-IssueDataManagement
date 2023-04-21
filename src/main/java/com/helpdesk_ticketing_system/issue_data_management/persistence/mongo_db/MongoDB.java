@@ -171,4 +171,45 @@ public class MongoDB<T> implements Database<T> {
             throw e;
         }
     }
+
+    @Override
+    public List<T> getIssuesByStatus(
+            Object status,
+            Long startRange,
+            Long endRange,
+            Integer limit,
+            Class<T> targetType) throws Exception {
+        List<T> resultSet = new LinkedList<>();
+        List<Bson> queryFiltersList = new LinkedList<>();
+        Bson queryFilters;
+
+        queryFiltersList.add(Filters.eq("status",status));
+
+        if(endRange!=null){
+            queryFiltersList.add(Filters.gte("posted_on", startRange));
+            queryFiltersList.add(Filters.lte("posted_on", endRange));
+        }
+        else
+            queryFiltersList.add(Filters.gt("posted_on", startRange));
+
+        queryFilters = Filters.and(queryFiltersList);
+
+        FindIterable<Document> findIterable = collection.find(queryFilters).limit(limit);
+        try (MongoCursor<Document> cursor = findIterable.cursor()) {
+            cursor.forEachRemaining(document -> {
+                try {
+                    resultSet.add(objectMapper.readValue(document.toJson(), targetType));
+                } catch (JsonProcessingException e) {
+                    Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
+                    throw new RuntimeException(e.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
+            throw new Exception(e.getMessage());
+        }
+
+        return resultSet;
+    }
 }

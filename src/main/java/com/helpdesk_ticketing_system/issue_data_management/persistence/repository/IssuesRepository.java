@@ -68,6 +68,11 @@ class IssuesRepository implements IssuesDao{
         return db.update(issueId,updatedFieldValuePairs, Issue.class);
     }
 
+    @Override
+    public List<Issue> getNewIssues(Status status, Integer limit, Long startRange, Long endRange) throws Exception {
+        return db.getIssuesByStatus(status,startRange, endRange, limit, Issue.class);
+    }
+
     private String generateIssueId(Long postedOn) {
         calendar.setTimeInMillis(postedOn);
 
