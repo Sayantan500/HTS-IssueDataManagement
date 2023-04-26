@@ -223,66 +223,6 @@ public class ControllerAPI {
         return new ResponseEntity<>(newIssuesList,HttpStatus.OK);
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<Object> updateStatusField(
-            @PathVariable(name = "id") String issueId,
-            @RequestBody Map<String,String> requestBody
-    ){
-        if(requestBody.isEmpty())
-            return new ResponseEntity<>(
-                    new Response(HttpStatus.BAD_REQUEST.value(), "No request body found."),
-                    HttpStatus.BAD_REQUEST
-            );
-
-        //checking if status field is present.
-        if(!requestBody.containsKey(STATUS_FIELD))
-        {
-            return new ResponseEntity<>(
-                    new Response(
-                            HttpStatus.BAD_REQUEST.value(),
-                            "Field name in request body are either incorrect or not allowed to modify."
-                    ),
-                    HttpStatus.BAD_REQUEST
-            );
-        }
-
-        // checking if the status provided is valid
-        Status updatedStatus;
-        try
-        {
-            updatedStatus = Status.valueOf(requestBody.get("status").toUpperCase());
-            requestBody.put("status",updatedStatus.name());
-        }catch (IllegalArgumentException exception){
-            return new ResponseEntity<>(
-                    new Response(
-                            HttpStatus.BAD_REQUEST.value(),
-                            "Invalid value for 'status' has been provided."
-                    ),
-                    HttpStatus.BAD_REQUEST
-            );
-        }
-
-        try
-        {
-            Map<String, Object> fieldValuePairs = new LinkedHashMap<>(requestBody);
-            Issue oldIssueDocImage = issueRepository.updateIssue(issueId,fieldValuePairs);
-            return new ResponseEntity<>(oldIssueDocImage,HttpStatus.OK);
-        }catch (ResourceNotFoundException e){
-            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
-            return new ResponseEntity<>(
-                    new Response(HttpStatus.NOT_FOUND.value(), e.getMessage()),
-                    HttpStatus.NOT_FOUND
-            );
-        }
-        catch (Exception e) {
-            Logger.getLogger(this.getClass().getName()).severe(e.getMessage());
-            return new ResponseEntity<>(
-                    new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Some error occurred."),
-                    HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
     private void ValidateRequestBody(Issue issue) throws PostRequestBodyInvalid {
         // submitted_by has username which must not contain any whitespace and must have some value
         String submittedBy = issue.getSubmitted_by();
